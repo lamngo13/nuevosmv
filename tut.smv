@@ -1,0 +1,6 @@
+MODULE main
+VAR
+  request : boolean;
+  state : {ready, busy};
+ASSIGN
+  init(state) :=
