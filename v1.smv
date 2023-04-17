@@ -1,0 +1,36 @@
+MODULE main
+-- rn I'm making states out of the states on the pdf
+--page 1100 of the pdf
+	VAR
+	   SPRO_CLOSED: boolean;
+	   SPRO_WAIT_CONNECT_RSP: boolean;
+	   SPRO_WAIT_FINAL_RSP: boolean;
+	   SPRO_WAIT_CONTROL_IND: boolean;
+	   SPRO_OPEN: boolean;
+	   SPRO_WAIT_CONNECT: boolean;
+	   SPRO_WAIT_CONFIG: boolean;
+	   SPRO_WAIT_SEND_CONFIG: boolean;
+	   SPRO_WAIT_CONFIG_REQ_RSP: boolean;
+	   SPRO_WAIT_CONFIG_REQ: boolean;
+	   SPRO_WAIT_IND_FINAL_RSP: boolean;
+	   SPRO_WAIT_CONFIG_RSP: boolean;
+	ASSIGN
+	   init(SPRO_CLOSED) := FALSE;
+	   init(SPRO_WAIT_CONNECT_RSP) := FALSE;
+	   init(SPRO_WAIT_FINAL_RSP) := FALSE;
+	   init(SPRO_WAIT_CONTROL_IND) := FALSE;
+	   init(SPRO_OPEN) := FALSE;
+	   init(SPRO_WAIT_CONNECT) := FALSE;
+	   init(SPRO_WAIT_CONFIG) := FALSE;
+	   init(SPRO_WAIT_SEND_CONFIG) := FALSE;
+	   init(SPRO_WAIT_CONFIG_REQ_RSP) := FALSE;
+	   init(SPRO_WAIT_CONFIG_REQ) := FALSE;
+	   init(SPRO_WAIT_IND_FINAL_RSP) := FALSE;
+	   init(SPRO_WAIT_CONFIG_RSP) := FALSE;
+	  -- init(x) := FALSE;
+	   --init(y) := TRUE;
+	   --next(x) := x;
+	   --next(y) := !y;
+--LTLSPEC G (x <-> !y)
+LTLSPEC G (SPRO_CLOSED)
+
