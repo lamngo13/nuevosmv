@@ -1,0 +1,17 @@
+MODULE main
+VAR
+  request : boolean; --this is an INPUT. Because we don't specify, it can take either T/F at any cycle
+  state : {ready, busy};  -- this is an enumeration of states, it could be ready or busy.
+ASSIGN
+  init(state) := ready;  --initial // starting state
+  next(state) := case
+  	            state = ready & request = TRUE : busy; -- if the state={ready} AND the request is TRUE, set state to busy
+		    --"else"
+		    state = ready & request = FALSE : ready;  --this and other case are basically do nothing without request
+		    state = busy : busy;
+		  esac;  --end of case statements 
+
+LTLSPEC G(state=ready -> F(state=busy));
+--this is the 'liveness' property, saying that globally (G), eventually (F), 
+--whenever the system is in the 'ready' state, it must at some point be in the 'busy' state.  
+--this is violated in the case that request is ALWAYS FALSE
