@@ -74,8 +74,9 @@ ASSIGN
 		    --STATE: WAIT_CONFIG_REQ
 		    state = wait_config_req & l2_configreqa = TRUE : wait_ind_final_rsp;
 		    state = wait_config_req & l2_configreqn = TRUE : wait_config_req;
+		    state = wait_config_req & l2_configreqa = TRUE : open;
 
-		    --STATE: WAIT_IND_FINAL_RSP 4
+		    --STATE: WAIT_IND_FINAL_RSP 
 		    state = wait_ind_final_rsp & controllerindicationr = TRUE : wait_config;
 		    state = wait_ind_final_rsp & l2_configrspf = TRUE : wait_config;
 		    state = wait_ind_final_rsp & controllerindicationa = TRUE : wait_final_rsp;
@@ -87,6 +88,8 @@ ASSIGN
 		    state = wait_config_rsp & l2_configrsps = TRUE : wait_config_req;
 
 		    --STATE: OPEN
+
+		    --TODO i think this is all
 
 
 		    --"else" we stay in state (and ignore the req)
