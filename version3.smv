@@ -1,0 +1,76 @@
+MODULE main
+VAR
+  state : {wait_connect_rsp, closed, wait_config, wait_connect, wait_final_rsp, open, wait_control_ind, wait_config_req, wait_send_config, wait_config_req_rsp, wait_ind_final_rsp, wait_config_rsp};
+  -- this ^ is an enumeration of states; all the states that exist
+
+  --these are inputs that can either be T/F at any point - those T/F values are used in case/next evaluation
+  --TODO figure out how to use actions in the 'other' entity
+
+  --looking at these only as EVENTS (single model)
+  l2_connectrsps: boolean;
+  l2_connectrspf: boolean;
+
+  l2_connectreq: boolean;
+
+  controllerindicationa: boolean;
+  controllerindicationr: boolean;
+
+  l2_configrspf: boolean;
+  l2_configrsps: boolean;
+
+  openchannelrsps: boolean;
+  openchannelrspf: boolean;
+
+  l2_configreqa: boolean;
+  l2_configreqn: boolean;
+
+  configchannelreqs: boolean;
+  configchannelreqf: boolean;
+
+  l2_connectreqs: boolean;
+  l2_connectreqf: boolean;
+
+  --NOT YET EXHAUSTIVE THIS IS JUST TWO THERE ARE LIKE 30
+
+--DEFINE
+  --at_most_one_true : count(l2_connectrsps, l2_connectrspf, l2_connectreq, controllerindicationa, controllerindicationr, l2_configrspf, l2_configrsps, openchannelrsps, openchannelrspf, l2_configreqa, l2_configreqn, configchannelreqs, configchannelreqf, l2_connectreqs, l2_connectreqf) <= 1;
+
+--INVARSPEC
+  --at_most_one_true;
+
+ASSIGN
+  init(state) := wait_connect_rsp; -- inital / starting state
+  next(state) := case
+                    --STATE: WAIT_CONNECT_RSP
+                    state = wait_connect_rsp & l2_connectrsps = TRUE : wait_config;
+                    -- this ^ says if the state is currently wait_connect_rsp
+                    -- and the l2_connectrsp is TRUE, then set the state to wait_config
+
+                    --STATE: WAIT_CONFIG
+                    --3 arrows (2 outside, 1 self)
+                    state = wait_config & l2_configreqa = TRUE : wait_send_config;
+                    state = wait_config & configchannelreqs = TRUE : wait_config_req_rsp;
+                    state = wait_config & l2_configreqn = TRUE : wait_config;
+
+                    --STATE: CLOSED
+                    state = closed & l2_connectreqs = TRUE : wait_config;
+
+                    --STATE: WAIT_CONNECT
+                    state = wait_connect & openchannelrsps = TRUE : wait_config;
+
+                    --STATE: WAIT_FINAL_RSP
+                    state = wait_final_rsp & l2_configrsps = TRUE : open;
+
+                    --STATE: WAIT_CONTROL_IND
+                    state = wait_control_ind & controllerindicationa = TRUE : open;
+                    state = wait_control_ind & controllerindicationr = TRUE : wait_config;
+
+                    --todo wait_config_req, wait_ind_final_rsp, wait_config_rsp, open
+
+                    --STATE: WAIT_SEND_CONFIG
+                    state = wait_send_config & configchannelreqs = TRUE : wait_config_rsp;
+
+                    --STATE WAIT_CONFIG_REQ_RSP
+                    state = wait_config_req_rsp & l2_configrspf = TRUE : wait_config_req;
+	esac;
+--assertion here

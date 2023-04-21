@@ -33,12 +33,6 @@ VAR
 
   --NOT YET EXHAUSTIVE THIS IS JUST TWO THERE ARE LIKE 30
 
---DEFINE
-  --at_most_one_tru : count(l2_connectrsps, l2_connectrspf, l2_connectreq, controllerindicationa, controllerindicationr, l2_configrspf, l2_configrsps, openchannelrsps, openchannelrspf, l2_configreqa, l2_configreqn, configchannelreqs, configchannelreqf, l2_connectreqs, l2_connectreqf) <= 1;
-
---INVARSPEC
-  --at_most_one_tru;
-
 ASSIGN
   init(state) := wait_connect_rsp; -- inital / starting state 
   next(state) := case
