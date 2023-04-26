@@ -1,0 +1,48 @@
+--yah yeet yeet yah
+MODULE main
+VAR
+  entity_A : Entity_A(entity_B.msg_out);
+  entity_B : Entity_B(entity_A.msg_out);
+
+MODULE Entity_A(incoming_msg) --events   --ENTITY A IS PROVOKER
+VAR
+  state : {FAILTESTSTATE, wait_connect_rsp, wait_config, wait_send_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req, wait_final_rsp, wait_control_ind, wait_ind_final_rsp, closed};
+  msg_out : {l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE }; --actions
+ASSIGN
+  init(state) := wait_connect_rsp;
+  init(msg_out) := l2_connectreq;
+
+  next(state) := case
+    --incoming_msg = hello : hello_received;
+    incoming_msg = l2_connectrsp : wait_config_req_rsp;
+    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+  esac;
+
+  next(msg_out) := case
+    --state = idle : {hello, goodbye, ping, pong};
+    --unsure if necessary state = wait_connect_rsp : l2_connectreq;
+    state = wait_config_req_rsp : l2_configReq_optionsacceptable;    --if has transitioned to this state, send the connect req
+    TRUE : BADMESSAGE;
+  esac;
+
+
+
+MODULE Entity_B(incoming_msg)  --incoming message is events  --ENTITY B IS RECIEVER
+VAR
+  state : {FAILTESTSTATE, wait_config, wait_send_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req, wait_final_rsp, wait_control_ind, wait_ind_final_rsp, closed};
+  msg_out : {l2_connectrsp, l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE};
+ASSIGN
+  init(state) := closed;
+  --init(msg_out) := none;
+
+  next(state) := case
+    incoming_msg = l2_connectreq : wait_config;
+    TRUE : FAILTESTSTATE;
+  esac;
+
+  next(msg_out) := case
+    state = wait_config : l2_connectrsp;
+    TRUE : BADMESSAGE;
+  esac;
+--LTLSPEC G(state=closed -> F(state=wait_config));
+LTLSPEC G(state=closed -> F(state=wait_ind_final_rsp));
