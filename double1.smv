@@ -7,7 +7,7 @@ VAR
 MODULE Entity_A(incoming_msg) --events   --ENTITY A IS PROVOKER
 VAR
   state : {FAILTESTSTATE, wait_connect_rsp, wait_config, wait_send_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req, wait_final_rsp, wait_control_ind, wait_ind_final_rsp, closed};
-  msg_out : {l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE }; --actions
+  msg_out : {l2_config_rsp_acceptable, l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE }; --actions
 ASSIGN
   init(state) := wait_connect_rsp;
   init(msg_out) := l2_connectreq;
@@ -15,13 +15,15 @@ ASSIGN
   next(state) := case
     --incoming_msg = hello : hello_received;
     incoming_msg = l2_connectrsp : wait_config_req_rsp;
+    incoming_msg = l2_configRsp_success: wait_config_req;
     TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
   esac;
 
   next(msg_out) := case
     --state = idle : {hello, goodbye, ping, pong};
     --unsure if necessary state = wait_connect_rsp : l2_connectreq;
-    state = wait_config_req_rsp : l2_configReq_optionsacceptable;    --if has transitioned to this state, send the connect req
+    state = wait_config_req_rsp : l2_configReq_optionsacceptable; --if has transitioned to this state, send the connect req
+    state = wait_config_req : l2_config_rsp_acceptable;    
     TRUE : BADMESSAGE;
   esac;
 
@@ -30,19 +32,27 @@ ASSIGN
 MODULE Entity_B(incoming_msg)  --incoming message is events  --ENTITY B IS RECIEVER
 VAR
   state : {FAILTESTSTATE, wait_config, wait_send_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req, wait_final_rsp, wait_control_ind, wait_ind_final_rsp, closed};
-  msg_out : {l2_connectrsp, l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE};
+  msg_out : {l2_config_rsp_acceptable, l2_connectrsp, l2_configRsp_fail, l2_configRsp_success, l2_configRsp_optionsacceptable, l2_configReq, l2_configReq_newoptions, l2_configReq_optionsacceptable, l2_connectreq, BADMESSAGE};
 ASSIGN
   init(state) := closed;
   --init(msg_out) := none;
 
   next(state) := case
     incoming_msg = l2_connectreq : wait_config;
+    incoming_msg = l2_configReq_optionsacceptable : wait_config_rsp;
+    --todoincoming_msg = l2_config_rsp_acceptable & state = 
     TRUE : FAILTESTSTATE;
   esac;
 
   next(msg_out) := case
     state = wait_config : l2_connectrsp;
+    state = wait_config_rsp : l2_configRsp_success;
+
     TRUE : BADMESSAGE;
   esac;
 --LTLSPEC G(state=closed -> F(state=wait_config));
-LTLSPEC G(state=closed -> F(state=wait_ind_final_rsp));
+LTLSPEC G(state=closed -> F(state=wait_config));
+
+--initiator path: wait_send_config: a config request has not yet been initiated, while for the response path, a request with acceptable options has been recieved
+--initiator path: a request has been sent but a positive response has not yet been recieved, and for the acceptor path, a request w good options has not yet been recieved
+--wait_config_req_rsp: for initiator path, a req has been sent, but a positive response has not yet been recieved, and for the acceptor path, a request w acceptable options has not yet been recieved
