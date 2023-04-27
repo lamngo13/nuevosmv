@@ -1,0 +1,77 @@
+--BOTH INITIATE
+MODULE main
+VAR
+  entity_A : Entity_A(entity_B.msg_out);
+  entity_B : Entity_B(entity_A.msg_out);
+
+MODULE Entity_A(incoming_msg) --events   --ENTITY A IS PROVOKER
+VAR
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open};
+  msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_rsp_NAH, l2_config_req_OA, l2_config_req_NAH, l2_config_rsp_success}; --actions
+ASSIGN
+  init(state) := wait_config;
+  --init(msg_out) := {configChannelReq, l2_config_req_OA, l2_config_req_NAH};
+  init(msg_out) := {configChannelReq};
+
+  next(state) := case --TODO MAYBE CHANGE TO TRANS????
+    state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
+    state = wait_config_req_rsp & incoming_msg = l2_config_req_OA : wait_config_rsp;
+    state = wait_config_req_rsp & incoming_msg = l2_config_req_NAH : wait_config_req_rsp;
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open;
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_NAH : wait_config_rsp;
+     --TODO MAKE THIS THE END STATE
+    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+  esac;
+
+  next(msg_out) := case
+    state = wait_config_req_rsp : {l2_config_req_OA, l2_config_req_NAH};
+    state = wait_config_rsp : {l2_config_rsp_OA, l2_config_rsp_NAH};
+    TRUE : BADMESSAGE;
+  esac;
+INVAR
+  state = open;
+LTLSPEC G(state=wait_config -> F(state=wait_config));
+LTLSPEC G(state=wait_config -> F(state!=wait_config));
+LTLSPEC G(state = wait_config_req_rsp -> F(state != wait_config_rsp))
+LTLSPEC G(state = wait_config_req_rsp -> X(state = wait_config_rsp))
+LTLSPEC G(state = wait_config_req_rsp -> X(state = open))
+LTLSPEC G(state = wait_config_req_rsp -> X(msg_out = l2_config_req_OA))
+LTLSPEC G(state = open -> F(state = FAILTESTSTATE))
+
+
+MODULE Entity_B(incoming_msg) --events   --ENTITY A IS PROVOKER
+VAR
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open};
+  msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_rsp_NAH, l2_config_req_OA, l2_config_req_NAH, l2_config_rsp_success}; --actions
+ASSIGN
+  init(state) := wait_config;
+  --init(msg_out) := configChannelReq;
+  init(msg_out) := {configChannelReq};
+
+  next(state) := case --TODO MAYBE CHANGE TO TRANS????
+    state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
+    state = wait_config_req_rsp & incoming_msg = l2_config_req_OA : wait_config_rsp;
+    state = wait_config_req_rsp & incoming_msg = l2_config_req_NAH : wait_config_req_rsp;
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open;
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_NAH : wait_config_rsp;
+     --TODO MAKE THIS THE END STATE
+    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+  esac;
+
+  next(msg_out) := case
+    state = wait_config_req_rsp : {l2_config_req_OA, l2_config_req_NAH};
+    state = wait_config_rsp : {l2_config_rsp_OA, l2_config_rsp_NAH};
+    TRUE : BADMESSAGE;
+  esac;
+INVAR
+  state = open;
+LTLSPEC G(state=wait_config -> F(state=wait_config));
+LTLSPEC G(state=wait_config -> F(state!=wait_config));
+LTLSPEC G(state = wait_config_req_rsp -> F(state != wait_config_rsp))
+LTLSPEC G(state = wait_config_req_rsp -> X(state = wait_config_rsp))
+LTLSPEC G(state = wait_config_req_rsp -> X(state = open))
+LTLSPEC G(state = wait_config_req_rsp -> X(msg_out != l2_config_req_OA))
+LTLSPEC G(state = open -> F(state != FAILTESTSTATE))
+
+
+
