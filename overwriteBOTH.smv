@@ -50,7 +50,7 @@ INVAR
   state = open;
 --^this defines the end state as the 'open' state 
 
-LTLSPEC G(state=wait_config -> F(state=wait_config));
+LTLSPEC G(state=wait_config -> F(state=open));
 --In English , this is saying "If the entity is ever in the wait_config state
 --(which it starts in) then it will eventualy reach an end state"
 
@@ -84,7 +84,7 @@ ASSIGN
   esac;
 INVAR
   state = open;
-LTLSPEC G(state=wait_config -> F(state=wait_config));
+LTLSPEC G(state=wait_config -> F(state=open));
 
 
 
