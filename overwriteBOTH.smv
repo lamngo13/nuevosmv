@@ -1,16 +1,30 @@
---BOTH INITIATE
+--This is the case where both entities are initiators
 MODULE main
 VAR
-  entity_A : Entity_A(entity_B.msg_out);
+  entity_A : Entity_A(entity_B.msg_out);  --entity A will send a message to entity B as msg_out, and vice versa
   entity_B : Entity_B(entity_A.msg_out);
 
-MODULE Entity_A(incoming_msg) 
+MODULE Entity_A(incoming_msg) --entity B's outgoing message is parsed as entity_A.incoming_msg
 VAR
-  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open};
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open};  --this is the set of possible states
   msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_rsp_NAH, l2_config_req_OA, l2_config_req_NAH, l2_config_rsp_success};
+  --^This is the set of possible responses, OA means 'options acceptable' and NAH means "options Not acceptable"
+  --which may cause the state to transition to itself as the two entities to not continue in their traversal until
+  --the agree on a configuration setup
 ASSIGN
-  init(state) := wait_config;
-  init(msg_out) := {configChannelReq, l2_config_req_OA};
+  init(state) := wait_config;  -- both entities start in the wait_config state
+  init(msg_out) := {configChannelReq, l2_config_req_OA}; --THIS IS THE DOUBLE INITIATOR PROBLEM
+  --it's possible that entity_A will send configChannelReq, recieve the configChannelReq
+  --from entity_B, and respond with l2_config_req_OA, and entity_B for underlying reasons 
+  --outside the scope of L2CAP will have its buffer (holding configChannelReq) overwritten
+  -- by l2_config_req_OA.  We model this event by nondeterministically choosing to send either 
+  --configChannelReq, the normal case, OR l2_config_req_OA, the overwrite case as the inital 
+  --msg_out.  This way, we don't model a buffer itself, but we use 'msg_out' to refer as 
+  --'what the recieving entity actually processes'
+  --This is incomplete and not applied to all possible message orientations throughout the FSM, but
+  --it does provide cool insight as to what happens
+  --If the overwrite case happens, the model simply 'becomes' the single initiator model
+  --instead of the double initiator model and continues as normal. 
 
   next(state) := case 
     state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
@@ -18,6 +32,9 @@ ASSIGN
     state = wait_config_req_rsp & incoming_msg = l2_config_req_NAH : wait_config_req_rsp;
     state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open;
     state = wait_config_rsp & incoming_msg = l2_config_rsp_NAH : wait_config_rsp;
+    --^This is the transition diagram.  Given a current state, and the incoming_msg,
+    --the state will transition to another state
+    --under certain circumstances, the state may transition to itself.
     TRUE : FAILTESTSTATE; 
   esac;
 
@@ -25,10 +42,19 @@ ASSIGN
     state = wait_config_req_rsp : {l2_config_req_OA, l2_config_req_NAH};
     state = wait_config_rsp : {l2_config_rsp_OA, l2_config_rsp_NAH};
     TRUE : BADMESSAGE;
+    --The transitions themselves are modeled in lines 30-34.  Each transition
+    --event itself is a trigger for an outgoing message, so the state itself (having been transitioned to)
+    --precipitates a certain outgoing message, msg_out. 
   esac;
 INVAR
   state = open;
+--^this defines the end state as the 'open' state 
+
 LTLSPEC G(state=wait_config -> F(state=wait_config));
+--In English , this is saying "If the entity is ever in the wait_config state
+--(which it starts in) then it will eventualy reach an end state"
+
+--**Because this is the double initiator model, both entities are modeled the exact same way. 
 
 
 
