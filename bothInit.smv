@@ -1,22 +1,36 @@
---BOTH INITIATE
+--This models the case where both entities try to initiate configuration with each other concurrently. 
+--Thus, they start in the same initial state and pre-emptively send out the same message
+--Thus, their models in this file are identical and model communication
+
 MODULE main
 VAR
-  entity_A : Entity_A(entity_B.msg_out);
-  entity_B : Entity_B(entity_A.msg_out);
+  entity_A : Entity_A(entity_B.msg_out);  --there are two entities, each representing an equal entity trying to configure
+  entity_B : Entity_B(entity_A.msg_out);  --entity_A will send a msg_out, which is recieved by entity_B as 'incoming_msg' and vice versa
 
-MODULE Entity_A(incoming_msg) --events   --ENTITY A IS PROVOKER
+MODULE Entity_A(incoming_msg)
 VAR
-  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open};
-  msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_req_OA, l2_config_rsp_success}; --actions
-ASSIGN
-  init(state) := wait_config;
-  init(msg_out) := configChannelReq;
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open}; 
+  --^ This is the set of states allowed by an entity, they conditionally determine a response message
+  --where 'response message' could be a request or response for a given configuration component, 'response' is a bit of a misnomer
+  --because messages could be requests or responses, we define 'response' as a message sent given a certain set of conditions 
 
-  next(state) := case --TODO MAYBE CHANGE TO TRANS????
+  msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_req_OA, l2_config_rsp_success}; 
+  --this is the set of messages that an entity may send to another 
+ASSIGN
+  init(state) := wait_config; -- this is the inital state for the configuration setup.  We break up different processes that comprise the whole 'configuration'
+  --process into different files for clarity.  We prove in the 'TODO' file that a system which models channel opening and configuration between two entities 
+  --can reach the configuration process, so this file itself only models the configuration process 
+
+  init(msg_out) := configChannelReq; --this is the inital message sent, it is a request to the other entity to establish the configuration parameters.  In this file,
+  --both entities send this message to each other at the same time.
+
+  next(state) := case --A given state is conditionally changed based on the current state, and the message recieved.  The 'incoming message relative to entity A'
+  --here is modeled as 'incoming_msg' here, and 'msg_out' in entity_b. 
+
     state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
     state = wait_config_req_rsp & incoming_msg = l2_config_req_OA : wait_config_rsp;
-    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open; --TODO MAKE THIS THE END STATE
-    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open; 
+    TRUE : FAILTESTSTATE;  -- the 'TRUE' will trigger in the case that none of the conditions are met, which allows us to 
   esac;
 
   next(msg_out) := case
@@ -53,3 +67,7 @@ INVAR
 
 
 LTLSPEC G(state=wait_config -> F(state=open));
+LTLSPEC G(state=wait_config -> F(state = FAILTESTSTATE));
+
+--CTLSPEC
+  --AG(state=wait_config -> AF(state = FAILTESTSTATE));

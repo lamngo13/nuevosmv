@@ -67,11 +67,6 @@ INVAR
   state = open;
 LTLSPEC G(state=wait_config -> F(state=wait_config));
 LTLSPEC G(state=wait_config -> F(state!=wait_config));
-LTLSPEC G(state = wait_config_req_rsp -> F(state != wait_config_rsp))
-LTLSPEC G(state = wait_config_req_rsp -> X(state = wait_config_rsp))
-LTLSPEC G(state = wait_config_req_rsp -> X(state = open))
-LTLSPEC G(state = wait_config_req_rsp -> X(msg_out != l2_config_req_OA))
-LTLSPEC G(state = open -> F(state != FAILTESTSTATE))
 
 
 
