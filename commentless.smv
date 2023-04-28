@@ -1,0 +1,58 @@
+
+MODULE main
+VAR
+  entity_A : Entity_A(entity_B.msg_out); 
+
+MODULE Entity_A(incoming_msg) 
+VAR
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req};
+  msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_req_OA}; 
+ASSIGN
+  init(state) := wait_config;
+  init(msg_out) := configChannelReq;
+
+  next(state) := case 
+    state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
+    state = wait_config_req_rsp & incoming_msg = l2_config_rsp_OA : wait_config_req;
+    state = wait_config_req_rsp & incoming_msg = l2_config_req_OA : wait_config_rsp;
+    state = wait_config_req & incoming_msg = l2_config_rsp_OA : open;
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open; 
+
+    TRUE : FAILTESTSTATE;
+  esac;
+
+  next(msg_out) := case
+    state = wait_config_req_rsp : l2_config_req_OA;
+    state = wait_config_rsp : l2_config_rsp_OA;
+    TRUE : BADMESSAGE;
+  esac;
+
+INVAR
+  state = open;
+
+LTLSPEC G(state=wait_config -> F(state=open));
+
+
+MODULE Entity_B(incoming_msg) --events   --ENTITY B is the responder 
+VAR
+  state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open, wait_send_config};
+  msg_out : {BADMESSAGE, configChannelReq, l2_config_req_OA, l2_config_rsp_OA}; --actions
+ASSIGN
+  init(state) := wait_config;
+  
+
+  next(state) := case  
+    state = wait_config & incoming_msg = l2_config_req_OA : wait_send_config;
+    state = wait_send_config & incoming_msg = l2_config_rsp_OA : open;
+    TRUE : FAILTESTSTATE;  
+  esac;
+
+  next(msg_out) := case
+    state = wait_send_config : {l2_config_rsp_OA, l2_config_req_OA};
+    TRUE : BADMESSAGE;
+  esac;
+INVAR
+  state = open;
+
+
+LTLSPEC G(state=wait_config -> F(state=open));

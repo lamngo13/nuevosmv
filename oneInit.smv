@@ -1,51 +1,78 @@
---BOTH INITIATE
+--This is the case that one entity initiates a l2cap configuration request
+--the entity that initiates it is called entity A (aka the provoker)
+--the entity that recieves the initial config request is entity B (aka the responder)
 MODULE main
 VAR
-  entity_A : Entity_A(entity_B.msg_out);
-  entity_B : Entity_B(entity_A.msg_out);
+  entity_A : Entity_A(entity_B.msg_out); --there are two entities, each representing a peer
+  entity_B : Entity_B(entity_A.msg_out); --entity A will send a msg_out, which is recieved
+  --by entity B as "incoming_msg" and vice versa
 
 MODULE Entity_A(incoming_msg) --events   --ENTITY A IS PROVOKER
 VAR
   state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open, wait_config_req};
+  --^ This is the set of states allowed by an entity, they conditionally determine a response message
+  -- this response message, denoted as "msg_out" 
   msg_out : {BADMESSAGE, configChannelReq, l2_config_rsp_OA, l2_config_req_OA}; --actions
+  --^This is the set of possible response messages 
 ASSIGN
   init(state) := wait_config;
+  --an entity will always start in this state as we are modeling the configuration process
   init(msg_out) := configChannelReq;
+  --as the provoker, other Bluetooth layers will trigger this entity to send a configuration request
+  --we don't model the trigger itself, but we note that it must happen for this process
+  --to occur, so the provoker in our model always starts by sending this message
 
   next(state) := case --TODO MAYBE CHANGE TO TRANS????
     state = wait_config & incoming_msg = configChannelReq : wait_config_req_rsp;
     state = wait_config_req_rsp & incoming_msg = l2_config_rsp_OA : wait_config_req;
     state = wait_config_req_rsp & incoming_msg = l2_config_req_OA : wait_config_rsp;
     state = wait_config_req & incoming_msg = l2_config_rsp_OA : open;
-    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open; --TODO MAKE THIS THE END STATE
-    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+    state = wait_config_rsp & incoming_msg = l2_config_rsp_OA : open; 
+    --^These lines denote the transition diagram of the FSM.  They define 
+    --what state an entity will transition to conditionally based on the current state
+    --and recieved message
+
+    TRUE : FAILTESTSTATE;  --failstate catches cases that were not coded for
+    --it should never be the state of any entity 
   esac;
 
   next(msg_out) := case
     state = wait_config_req_rsp : l2_config_req_OA;
     state = wait_config_rsp : l2_config_rsp_OA;
-    TRUE : BADMESSAGE;
+    --because each state transiton is defined by both the incoming message, and the 
+    --current state, these states will only be true after the transition, so having
+    --already used the incoming message to transition to the correct state,
+    --we can make the outgoing message only conditional on a state
+    TRUE : BADMESSAGE; --this is the default response if a case is not met. 
   esac;
+
 INVAR
   state = open;
-LTLSPEC G(state=wait_config -> F(state=open));
+  --^this defines the end state 
 
-MODULE Entity_B(incoming_msg) --events   --ENTITY A IS PROVOKER
+LTLSPEC G(state=wait_config -> F(state=open));
+--In English , this is saying "If the entity is ever in the wait_config state
+--(which it starts in) then it will eventualy reach an end state"
+
+--***Everything commented about entity A is true for entity B except entity B's outgoing
+--message is not initialized to anything because it is the responder. 
+
+MODULE Entity_B(incoming_msg) --events   --ENTITY B is the responder 
 VAR
   state : {FAILTESTSTATE, wait_config, wait_config_req_rsp, wait_config_rsp, open, wait_send_config};
   msg_out : {BADMESSAGE, configChannelReq, l2_config_req_OA, l2_config_rsp_OA}; --actions
 ASSIGN
   init(state) := wait_config;
-  --init(msg_out) := configChannelReq;
+  
 
-  next(state) := case  --TODO MAYBE CHANGE TO TRANS????
+  next(state) := case  
     state = wait_config & incoming_msg = l2_config_req_OA : wait_send_config;
     state = wait_send_config & incoming_msg = l2_config_rsp_OA : open;
-    TRUE : FAILTESTSTATE;  --failstate catches states where we haven't yet coded for
+    TRUE : FAILTESTSTATE;  
   esac;
 
   next(msg_out) := case
-    state = wait_send_config : {l2_config_rsp_OA, l2_config_req_OA};--todo could send either
+    state = wait_send_config : {l2_config_rsp_OA, l2_config_req_OA};
     TRUE : BADMESSAGE;
   esac;
 INVAR
